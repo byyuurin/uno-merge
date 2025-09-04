@@ -1,13 +1,30 @@
 {
-  "name": "unocss-merge",
+  "name": "@byyuurin/unocss-merge",
+  "type": "module",
   "version": "0.0.0",
   "description": "",
-  "author": "",
+  "author": "Yuurin <byyuurin@gmail.com>",
   "license": "MIT",
+  "homepage": "https://github.com/byyuurin/uno-merge#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/byyuurin/uno-merge.git"
+  },
+  "bugs": "https://github.com/byyuurin/uno-merge/issues",
   "keywords": [],
-  "main": "index.js",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "scripts": {
-    "test": "vitest"
+    "test": "vitest",
+    "lint": "eslint",
+    "release": "bumpp && pnpm publish",
+    "prepack": "tsdown"
   },
   "dependencies": {
     "@unocss/core": "^66.5.0"
@@ -16,8 +33,10 @@
     "@byyuurin/eslint-config": "^1.8.3",
     "@byyuurin/ui-kit": "^0.7.0",
     "@types/node": "^24.3.0",
+    "bumpp": "^10.2.3",
     "eslint": "^9.34.0",
     "tailwind-merge": "^3.3.1",
+    "tsdown": "^0.14.2",
     "typescript": "^5.9.2",
     "unocss": "^66.5.0",
     "vitest": "^3.2.4"
