@@ -17,7 +17,7 @@ export async function createUnoMerge<T extends UserConfig = object>(config: T) {
       const variantResults = uno.matchVariants(token)
       const variant = token.replace(/^!|!$|\B!/, '').replace(variantResults[0]![1], '')
 
-      const tokenResults = uno.parseToken(token)
+      const tokenResults = uno.parseToken(token)?.filter((result) => !result[2].startsWith('@'))
       const css = tokenResults?.[0]![2] ?? token
 
       const content = css.replace(propertyNamesRE, '$1;')
