@@ -1,12 +1,12 @@
 import type { UserConfig } from '@unocss/core'
-import { createGenerator } from '@unocss/core'
+import { createGenerator } from './generator'
 
 const propertyNamesRE = /(?:([^:]+)):[^;]+;/g
 
 export async function createUnoMerge<T extends UserConfig = object>(config: T) {
   const uno = await createGenerator(config)
 
-  async function merge(code: string) {
+  function merge(code: string) {
     const temp = new Map<string, string>([])
     const group = new Map<string, string[]>([])
 
@@ -14,11 +14,11 @@ export async function createUnoMerge<T extends UserConfig = object>(config: T) {
       if (!token)
         continue
 
-      const variantResults = await uno.matchVariants(token)
-      const variant = token.replace(/^!|!$|\B!/, '').replace(variantResults[0][1], '')
+      const variantResults = uno.matchVariants(token)
+      const variant = token.replace(/^!|!$|\B!/, '').replace(variantResults[0]![1], '')
 
-      const tokenResults = await uno.parseToken(token)
-      const css = tokenResults?.[0][2] ?? token
+      const tokenResults = uno.parseToken(token)
+      const css = tokenResults?.[0]![2] ?? token
 
       const content = css.replace(propertyNamesRE, '$1;')
 
@@ -40,9 +40,6 @@ export async function createUnoMerge<T extends UserConfig = object>(config: T) {
 
       temp.set(tempKey, token)
     }
-
-    // console.log('==== temp ===\n', temp)
-    // console.log('=== group ===\n', group)
 
     return Array.from(temp.values()).filter(Boolean).join(' ')
   }
