@@ -1,10 +1,29 @@
-import type { UserConfig } from '@unocss/core'
+import type { ResolvedConfig, UserConfig } from '@unocss/core'
 import { createGenerator } from './generator'
 
 const propertyNamesRE = /(?:([^:]+)):[^;]+;/g
 
-export async function createUnoMerge<T extends UserConfig = object>(config: T) {
-  const uno = await createGenerator(config)
+export async function createUnoMerge<T extends UserConfig | ResolvedConfig = object>(config: T) {
+  const uno = await createGenerator(config as unknown as UserConfig)
+
+  function parseToken(token: string) {
+    const tokenResults = uno.parseToken(token)?.filter((result) => !result[2].startsWith('@'))
+    const css = tokenResults?.[0]![2] ?? token
+
+    const variantResults = uno.matchVariants(token)
+
+    let variant = token.replace(/^!|!$|\B!\b/, '').replace(variantResults[0]![1], '')
+
+    if (/!important\b/.test(css))
+      variant = `!${variant}`
+
+    const content = css.replace(propertyNamesRE, '$1;')
+
+    const groupKey = `${variant}${css.replace(propertyNamesRE, (_, $1) => ($1.startsWith('--')) ? '' : `${$1};`)}`
+    const tempKey = `${variant}${content}`
+
+    return { variant, groupKey, tempKey, content }
+  }
 
   function merge(code: string) {
     const temp = new Map<string, string>([])
@@ -14,21 +33,12 @@ export async function createUnoMerge<T extends UserConfig = object>(config: T) {
       if (!token)
         continue
 
-      const variantResults = uno.matchVariants(token)
-      const variant = token.replace(/^!|!$|\B!/, '').replace(variantResults[0]![1], '')
-
-      const tokenResults = uno.parseToken(token)?.filter((result) => !result[2].startsWith('@'))
-      const css = tokenResults?.[0]![2] ?? token
-
-      const content = css.replace(propertyNamesRE, '$1;')
-
-      const groupKey = `${variant}${css.replace(propertyNamesRE, (_, $1) => ($1.startsWith('--')) ? '' : `${$1};`)}`
-      const tempKey = `${variant}${content}`
+      const { variant, groupKey, tempKey, content } = parseToken(token)
 
       if (groupKey) {
-        const content = group.get(groupKey) ?? []
-        content.push(tempKey)
-        group.set(groupKey, content)
+        const groupValue = group.get(groupKey) ?? []
+        groupValue.push(tempKey)
+        group.set(groupKey, groupValue)
       }
 
       const removeKeys = getConflictingKeys(content, variant)

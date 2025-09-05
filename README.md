@@ -1,5 +1,7 @@
 # @byyuurin/uno-merge
 
+Utility function to efficiently merge [UnoCSS](https://unocss.dev/) classes in JS without style conflicts.
+
 [![npm version][npm-version-src]][npm-version-href]
 [![npm downloads][npm-downloads-src]][npm-downloads-href]
 [![bundle][bundle-src]][bundle-href]
@@ -11,6 +13,29 @@
 ```bash
 npm i @byyuurin/uno-merge
 ```
+
+## Usage
+
+```ts
+import { createUnoMerge } from '@byyuurin/uno-merge'
+import { presetWind4 } from 'unocss'
+
+const unoMerge = await createUnoMerge({
+  presets: [
+    presetWind4(),
+  ],
+})
+
+unoMerge('px-2 py-1 bg-red hover:bg-dark-red p-3 bg-red-700')
+// → "bg-red-700 hover:bg-dark-red p-3"
+```
+
+## Features
+
+- Resolves conflicts between UnoCSS utility classes
+- Works with arbitrary values and variants
+- Supports dynamic class merging
+- Supports shortcuts merging
 
 ## License
 
