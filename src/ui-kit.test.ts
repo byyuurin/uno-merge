@@ -15,7 +15,7 @@ describe('combine with ui-kit', () => {
   })
 
   it('cv(wind3)', async () => {
-    const unoMerge = await createUnoMerge({ presets: [presetWind3()] })
+    const { merge: unoMerge } = await createUnoMerge({ presets: [presetWind3()] })
     const cv = createCV((...classValues) => unoMerge(cx(classValues)))
     const button = cv(ui)
 
@@ -24,7 +24,7 @@ describe('combine with ui-kit', () => {
   })
 
   it('cv(wind4)', async () => {
-    const unoMerge = await createUnoMerge({ presets: [presetWind4()] })
+    const { merge: unoMerge } = await createUnoMerge({ presets: [presetWind4()] })
     const cv = createCV((...classValues) => unoMerge(cx(classValues)))
     const button = cv(ui)
 

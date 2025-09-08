@@ -4,13 +4,13 @@ import { createGenerator } from './generator'
 const propertyNamesRE = /(?:([^:]+)):[^;]+;/g
 
 export async function createUnoMerge<T extends UserConfig | ResolvedConfig = object>(config: T) {
-  const uno = await createGenerator(config as unknown as UserConfig)
+  const generator = await createGenerator(config as unknown as UserConfig)
 
   function parseToken(token: string) {
-    const tokenResults = uno.parseToken(token)?.filter((result) => !result[2].startsWith('@'))
+    const tokenResults = generator.parseToken(token)?.filter((result) => !result[2].startsWith('@'))
     const css = tokenResults?.[0]![2] ?? token
 
-    const variantResults = uno.matchVariants(token)
+    const variantResults = generator.matchVariants(token)
 
     let variant = token.replace(/^!|!$|\B!\b/, '').replace(variantResults[0]![1], '')
 
@@ -54,7 +54,19 @@ export async function createUnoMerge<T extends UserConfig | ResolvedConfig = obj
     return Array.from(temp.values()).filter(Boolean).join(' ')
   }
 
-  return merge
+  function getConfig() {
+    return generator.config
+  }
+
+  function setConfig(config: T) {
+    return generator.setConfig(config as unknown as UserConfig)
+  }
+
+  return {
+    merge,
+    getConfig,
+    setConfig,
+  }
 }
 
 // https://github.com/dcastil/tailwind-merge/blob/v2.6.0/src/lib/default-config.ts#L1771

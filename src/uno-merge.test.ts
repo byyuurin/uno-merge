@@ -15,7 +15,7 @@ describe('uno-merge', async () => {
     },
   })
 
-  const unoMerge = await createUnoMerge(uno.config)
+  const { merge: unoMerge } = await createUnoMerge(uno.config)
 
   it('uno-generator', async () => {
     const tokenResult = await uno.parseToken('')

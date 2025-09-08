@@ -20,7 +20,7 @@ npm i @byyuurin/uno-merge
 import { createUnoMerge } from '@byyuurin/uno-merge'
 import { presetWind4 } from 'unocss'
 
-const unoMerge = await createUnoMerge({
+const { merge: unoMerge } = await createUnoMerge({
   presets: [
     presetWind4(),
   ],
