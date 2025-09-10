@@ -2,7 +2,7 @@ import { createGenerator } from '@unocss/core'
 import { twMerge } from 'tailwind-merge'
 import { presetWind4 } from 'unocss'
 import { describe, expect, it } from 'vitest'
-import { combineAffixes, combineAffixesString, createUnoMerge } from './uno-merge'
+import { combineAffixes, combineAffixesString, createUnoMerge } from '../src/uno-merge'
 
 describe('uno-merge', async () => {
   it('combineAffixes', () => {

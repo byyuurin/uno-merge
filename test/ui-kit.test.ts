@@ -1,7 +1,7 @@
 import { createCV, ct, cx } from '@byyuurin/ui-kit'
 import { presetWind3, presetWind4 } from 'unocss'
 import { describe, expect, it } from 'vitest'
-import { createUnoMerge } from './uno-merge'
+import { createUnoMerge } from '../src/uno-merge'
 
 describe('combine with ui-kit', () => {
   const ui = ct({
