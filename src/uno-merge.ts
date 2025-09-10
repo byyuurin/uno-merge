@@ -5,8 +5,14 @@ const propertyNamesRE = /(?:([^:]+)):[^;]+;/g
 
 export async function createUnoMerge<T extends UserConfig | ResolvedConfig = object>(config: T) {
   const generator = await createGenerator(config as unknown as UserConfig)
+  const cache = new Map<string, { variant: string, groupKey: string, tempKey: string, content: string }>([])
 
   function parseToken(token: string) {
+    const cachedValue = cache.get(token)
+
+    if (cachedValue)
+      return cachedValue
+
     const tokenResults = generator.parseToken(token)?.filter((result) => !result[2].startsWith('@'))
     const css = tokenResults?.[0]![2] ?? token
 
@@ -17,12 +23,14 @@ export async function createUnoMerge<T extends UserConfig | ResolvedConfig = obj
     if (/!important\b/.test(css))
       variant = `!${variant}`
 
-    const content = css.replace(propertyNamesRE, '$1;')
+    const content = css.replace(propertyNamesRE, '$1; ').split(/\s/).sort().join('')
 
     const groupKey = `${variant}${css.replace(propertyNamesRE, (_, $1) => ($1.startsWith('--')) ? '' : `${$1};`)}`
     const tempKey = `${variant}${content}`
 
-    return { variant, groupKey, tempKey, content }
+    cache.set(token, { variant, groupKey, tempKey, content })
+
+    return cache.get(token)!
   }
 
   function merge(code: string) {
@@ -59,6 +67,7 @@ export async function createUnoMerge<T extends UserConfig | ResolvedConfig = obj
   }
 
   function setConfig(config: T) {
+    cache.clear()
     return generator.setConfig(config as unknown as UserConfig)
   }
 
@@ -154,14 +163,16 @@ interface CombineAffixesOptions {
   trailing?: string
 }
 
-function combineAffixes(
+export function combineAffixes(
   content: string[],
   options: CombineAffixesOptions = {},
 ) {
-  return content.map((s) => [options.leading, s, options.trailing].filter(Boolean).join('-'))
+  return Array.from(content)
+    .sort()
+    .map((s) => [options.leading, s, options.trailing].filter(Boolean).join('-'))
 }
 
-function combineAffixesString(
+export function combineAffixesString(
   content: string[],
   options: CombineAffixesOptions = {},
 ) {

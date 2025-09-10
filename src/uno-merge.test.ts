@@ -2,9 +2,17 @@ import { createGenerator } from '@unocss/core'
 import { twMerge } from 'tailwind-merge'
 import { presetWind4 } from 'unocss'
 import { describe, expect, it } from 'vitest'
-import { createUnoMerge } from './uno-merge'
+import { combineAffixes, combineAffixesString, createUnoMerge } from './uno-merge'
 
 describe('uno-merge', async () => {
+  it('combineAffixes', () => {
+    const arr1 = ['left', 'right', 'top', 'bottom']
+    const arr2 = ['top', 'bottom', 'left', 'right']
+
+    expect(combineAffixes(arr1)).toEqual(combineAffixes(arr2))
+    expect(combineAffixesString(arr1)).toEqual(combineAffixesString(arr2))
+  })
+
   const uno = await createGenerator({
     presets: [
       presetWind4(),
@@ -88,9 +96,9 @@ describe('uno-merge', async () => {
   })
 
   it('shadow', () => {
-    const input = 'ring shadow ring-2 ring-offset-1 shadow-xs'
-    expect(twMerge(input)).toMatchInlineSnapshot(`"ring-2 ring-offset-1 shadow-xs"`) // baseline
-    expect(unoMerge(input)).toMatchInlineSnapshot(`"ring-2 shadow-xs ring-offset-1"`)
+    const input = 'ring shadow ring-2 ring-offset-1 shadow-sm'
+    expect(twMerge(input)).toMatchInlineSnapshot(`"ring-2 ring-offset-1 shadow-sm"`) // baseline
+    expect(unoMerge(input)).toMatchInlineSnapshot(`"ring-2 shadow-sm ring-offset-1"`)
   })
 
   it('animation', () => {

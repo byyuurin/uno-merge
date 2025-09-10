@@ -3,7 +3,6 @@
     "target": "es2018",
     "jsx": "preserve",
     "lib": ["esnext"],
-    "moduleDetection": "force",
     "module": "esnext",
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
@@ -13,11 +12,7 @@
     ],
 
     "strict": true,
-    "strictNullChecks": false,
-    // "exactOptionalPropertyTypes": true,
-    "noUncheckedIndexedAccess": true,
-    "declaration": true,
-    "declarationMap": true,
+    "strictNullChecks": true,
     "esModuleInterop": true,
     "skipDefaultLibCheck": true,
     "skipLibCheck": true
