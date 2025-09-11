@@ -5,8 +5,10 @@
  * https://github.com/unocss/unocss/blob/48ea5e30f7c07ec20570688688b0993f527a057a/packages-engine/core/src/generator.ts
  *
  * Modifications:
- * 1. Only kept the parts required by `matchVariants` and `parseToken`, removed unused code.
- * 2. Converted the original asynchronous implementations into synchronous versions.
+ * 1. Retained only the parts necessary for `matchVariants` and `parseToken`
+ *    (removed unused parts), and converted both functions from asynchronous to synchronous.
+ * 2. Modified `parseToken` to return part of the `matchVariants` result together,
+ *    to avoid calling `matchVariants` again later for that value.
  *
  * Notes:
  * - This is not an official UnoCSS file.
@@ -17,11 +19,16 @@ import type { Awaitable, BlocklistMeta, BlocklistValue, ControlSymbolsEntry, CSS
 import { BetterMap, entriesToCss, expandVariantGroup, isRawUtil, isStaticShortcut, isString, noop, normalizeCSSEntries, normalizeCSSValues, notNull, resolveConfig, symbols, toArray, toEscapedSelector, TwoKeyMap, uniq, VirtualKey, warnOnce } from '@unocss/core'
 import { version } from '../package.json'
 
+interface InternalCacheValue<Theme extends object = object> {
+  current: string
+  utils: StringifiedUtil<Theme>[]
+}
+
 class UnoGeneratorInternal<Theme extends object = object> {
   public readonly version = version
 
   public config: ResolvedConfig<Theme> = undefined!
-  public cache = new Map<string, StringifiedUtil<Theme>[] | null>()
+  public cache = new Map<string, InternalCacheValue<Theme> | null>()
   public blocked = new Set<string>()
   public parentOrders = new Map<string, number>()
   public activatedRules = new Set<Rule<Theme>>()
@@ -75,7 +82,7 @@ class UnoGeneratorInternal<Theme extends object = object> {
   parseToken(
     raw: string,
     alias?: string,
-  ): StringifiedUtil<Theme>[] | undefined | null {
+  ): InternalCacheValue<Theme> | undefined | null {
     if (this.blocked.has(raw))
       return
 
@@ -117,11 +124,16 @@ class UnoGeneratorInternal<Theme extends object = object> {
       return utils
     }
 
-    const result = variantResults.flatMap((i) => handleVariantResult(i)).filter((x) => !!x)
+    const utils = variantResults.flatMap((i) => handleVariantResult(i)).filter((x) => !!x)
 
-    if (result?.length) {
-      this.cache.set(cacheKey, result)
-      return result
+    if (utils?.length) {
+      const cacheValue: InternalCacheValue<Theme> = {
+        current: variantResults[0][1],
+        utils,
+      }
+
+      this.cache.set(cacheKey, cacheValue)
+      return cacheValue
     }
 
     // set null cache for unmatched result

@@ -1,7 +1,7 @@
-import { createGenerator } from '@unocss/core'
 import { twMerge } from 'tailwind-merge'
 import { presetWind4 } from 'unocss'
 import { describe, expect, it } from 'vitest'
+import { createGenerator } from '../src/generator'
 import { combineAffixes, combineAffixesString, createUnoMerge } from '../src/uno-merge'
 
 describe('uno-merge', async () => {
@@ -28,9 +28,9 @@ describe('uno-merge', async () => {
   it('uno-generator', async () => {
     const tokenResult = await uno.parseToken('')
 
-    expect(tokenResult?.filter((result) => !result[2].startsWith('@'))?.[0][2]).toMatchInlineSnapshot(`undefined`)
+    expect(tokenResult?.utils?.filter((result) => !result[2].startsWith('@'))?.[0][2]).toMatchInlineSnapshot(`undefined`)
 
-    expect(tokenResult?.[0][2]).toMatchInlineSnapshot(`undefined`)
+    expect(tokenResult?.utils?.[0][2]).toMatchInlineSnapshot(`undefined`)
 
     const variantResult = await uno.matchVariants('')
 

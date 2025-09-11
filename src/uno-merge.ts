@@ -13,12 +13,12 @@ export async function createUnoMerge<T extends UserConfig | ResolvedConfig = obj
     if (cachedValue)
       return cachedValue
 
-    const tokenResults = generator.parseToken(token)?.filter((result) => !result[2].startsWith('@'))
-    const css = tokenResults?.[0]![2] ?? token
+    const { current = '', utils } = generator.parseToken(token) ?? {}
 
-    const variantResults = generator.matchVariants(token)
+    const tokenUtils = utils?.filter((result) => !result[2].startsWith('@'))
+    const css = tokenUtils?.[0]![2] ?? token
 
-    let variant = token.replace(/^!|!$|\B!\b/, '').replace(variantResults[0]![1], '')
+    let variant = token.replace(/^!|!$|\B!\b/, '').replace(current, '')
 
     if (/!important\b/.test(css))
       variant = `!${variant}`
