@@ -5,7 +5,7 @@ const propertyNamesRE = /(?:([^:]+)):[^;]+;/g
 
 export async function createUnoMerge<T extends UserConfig | ResolvedConfig = object>(config: T) {
   const generator = await createGenerator(config as unknown as UserConfig)
-  const cache = new Map<string, { variant: string, groupKey: string, tempKey: string, content: string }>([])
+  const cache = new Map<string, { tempKey: string, variant: string, properties: string[] }>([])
 
   function parseToken(token: string) {
     const cachedValue = cache.get(token)
@@ -23,38 +23,50 @@ export async function createUnoMerge<T extends UserConfig | ResolvedConfig = obj
     if (/!important\b/.test(css))
       variant = `!${variant}`
 
-    const content = css.replace(propertyNamesRE, '$1; ').split(/\s/).sort().join('')
+    // css properties after excluding css vars
+    const properties: string[] = []
 
-    const groupKey = `${variant}${css.replace(propertyNamesRE, (_, $1) => ($1.startsWith('--')) ? '' : `${$1};`)}`
-    const tempKey = `${variant}${content}`
+    const cssProperties = css === token
+      ? []
+      : css.split(propertyNamesRE).filter((p) => {
+          if (p && !p.startsWith('--'))
+            properties.push(p)
 
-    cache.set(token, { variant, groupKey, tempKey, content })
+          return Boolean(p)
+        }).sort()
+
+    cache.set(token, {
+      tempKey: `${variant}${cssProperties.join(';')}`,
+      variant,
+      properties,
+    })
 
     return cache.get(token)!
   }
 
   function merge(code: string) {
     const temp = new Map<string, string>([])
-    const group = new Map<string, string[]>([])
+    const variantGroup = new Map<string, string[]>([])
 
     for (const token of code.split(/\s+/g)) {
       if (!token)
         continue
 
-      const { variant, groupKey, tempKey, content } = parseToken(token)
+      const { variant, tempKey, properties } = parseToken(token)
+      const tokenConflicting = getTokenConflicting(properties)
+      const variantTokens = new Set(variantGroup.get(variant) ?? [])
 
-      if (groupKey) {
-        const groupValue = group.get(groupKey) ?? []
-        groupValue.push(tempKey)
-        group.set(groupKey, groupValue)
-      }
+      variantGroup.get(variant)
+        ?.map((token) => ({ target: token, targetInfo: cache.get(token)! }))
+        .forEach(({ target, targetInfo }) => {
+          if (tokenConflicting.some((v) => targetInfo.properties.includes(v))) {
+            variantTokens.delete(target)
+            temp.delete(targetInfo.tempKey)
+          }
+        })
 
-      const removeKeys = getConflictingKeys(content, variant)
-
-      for (const target of removeKeys) {
-        const tempKeys = group.get(target) ?? [target]
-        tempKeys.forEach((tempKey) => temp.delete(tempKey))
-      }
+      variantTokens.add(token)
+      variantGroup.set(variant, Array.from(variantTokens))
 
       temp.set(tempKey, token)
     }
@@ -80,101 +92,156 @@ export async function createUnoMerge<T extends UserConfig | ResolvedConfig = obj
 
 // https://github.com/dcastil/tailwind-merge/blob/v2.6.0/src/lib/default-config.ts#L1771
 const conflictingGroups: Record<string, string[]> = {
-  'overflow': combineAffixes(['x', 'y'], { leading: 'overflow' }),
+  'overflow': ['overflow-x', 'overflow-y'],
 
-  'overscroll-behavior': combineAffixes(['x', 'y'], { leading: 'overscroll-behavior' }),
+  'overscroll-behavior': ['overscroll-behavior-x', 'overscroll-behavior-y'],
 
-  'inset': ['left', 'right', 'top', 'bottom', 'inset-inline', 'inset-block', combineAffixesString(['left', 'right']), combineAffixesString(['top', 'bottom'])],
+  'inset': ['left', 'right', 'top', 'bottom', 'inset-inline', 'inset-block'],
   'inset-inline': ['left', 'right'],
   'inset-block': ['top', 'bottom'],
 
-  'gap': combineAffixes(['row', 'column'], { trailing: 'gap' }),
+  'gap': ['row-gap', 'column-gap'],
 
   'padding': [
-    ...combineAffixes(['top', 'bottom', 'left', 'right', 'inline', 'inline-start', 'inline-end', 'block', 'block-start', 'block-end'], { leading: 'padding' }),
-    combineAffixesString(['left', 'right'], { leading: 'padding' }),
-    combineAffixesString(['top', 'bottom'], { leading: 'padding' }),
+    'padding-top',
+    'padding-bottom',
+    'padding-left',
+    'padding-right',
+    'padding-inline',
+    'padding-inline-start',
+    'padding-inline-end',
+    'padding-block',
+    'padding-block-start',
+    'padding-block-end',
   ],
-  'padding-inline': combineAffixes(['left', 'right', 'inline-start', 'inline-end'], { leading: 'padding' }),
-  'padding-block': combineAffixes(['top', 'bottom', 'block-start', 'block-end'], { leading: 'padding' }),
+  'padding-inline': [
+    'padding-left',
+    'padding-right',
+    'padding-inline-start',
+    'padding-inline-end',
+  ],
+  'padding-block': [
+    'padding-top',
+    'padding-bottom',
+    'padding-block-start',
+    'padding-block-end',
+  ],
 
   'margin': [
-    ...combineAffixes(['top', 'bottom', 'left', 'right', 'inline', 'inline-start', 'inline-end', 'block', 'block-start', 'block-end'], { leading: 'margin' }),
-    combineAffixesString(['left', 'right'], { leading: 'margin' }),
-    combineAffixesString(['top', 'bottom'], { leading: 'margin' }),
+    'margin-top',
+    'margin-bottom',
+    'margin-left',
+    'margin-right',
+    'margin-inline',
+    'margin-inline-start',
+    'margin-inline-end',
+    'margin-block',
+    'margin-block-start',
+    'margin-block-end',
   ],
-  'margin-inline': combineAffixes(['left', 'right', 'inline-start', 'inline-end'], { leading: 'margin' }),
-  'margin-block': combineAffixes(['top', 'bottom', 'block-start', 'block-end'], { leading: 'margin' }),
+  'margin-inline': [
+    'margin-left',
+    'margin-right',
+    'margin-inline-start',
+    'margin-inline-end',
+  ],
+  'margin-block': [
+    'margin-top',
+    'margin-bottom',
+    'margin-block-start',
+    'margin-block-end',
+  ],
 
   'border-radius': [
-    ...combineAffixes(['start-start', 'start-end', 'end-end', 'end-start', 'top-left', 'top-right', 'bottom-right', 'bottom-left'], { leading: 'border', trailing: 'radius' }),
-    combineAffixesString(['end-start', 'start-start'], { leading: 'border', trailing: 'radius' }),
-    combineAffixesString(['start-end', 'end-end'], { leading: 'border', trailing: 'radius' }),
-    combineAffixesString(['top-left', 'top-right'], { leading: 'border', trailing: 'radius' }),
-    combineAffixesString(['bottom-left', 'bottom-right'], { leading: 'border', trailing: 'radius' }),
-    combineAffixesString(['top-left', 'bottom-left'], { leading: 'border', trailing: 'radius' }),
-    combineAffixesString(['top-right', 'bottom-right'], { leading: 'border', trailing: 'radius' }),
+    'border-start-start-radius',
+    'border-start-end-radius',
+    'border-end-end-radius',
+    'border-end-start-radius',
+    'border-top-left-radius',
+    'border-top-right-radius',
+    'border-bottom-right-radius',
+    'border-bottom-left-radius',
   ],
-  [combineAffixesString(['end-start', 'start-start'], { leading: 'border', trailing: 'radius' })]: combineAffixes(['end-start', 'start-start'], { leading: 'border', trailing: 'radius' }),
 
   'border-width': [
-    ...combineAffixes(['top', 'bottom', 'left', 'right', 'inline', 'inline-start', 'inline-end', 'block', 'block-start', 'block-end'], { leading: 'border', trailing: 'width' }),
-    combineAffixesString(['left', 'right'], { leading: 'border', trailing: 'width' }),
-    combineAffixesString(['top', 'bottom'], { leading: 'border', trailing: 'width' }),
+    'border-top-width',
+    'border-bottom-width',
+    'border-left-width',
+    'border-right-width',
+    'border-inline-width',
+    'border-inline-start-width',
+    'border-inline-end-width',
+    'border-block-width',
+    'border-block-start-width',
+    'border-block-end-width',
   ],
-  'border-inline-width': combineAffixes(['left', 'right'], { leading: 'border', trailing: 'width' }),
-  'border-block-width': combineAffixes(['top', 'bottom'], { leading: 'border', trailing: 'width' }),
+  'border-inline-width': [
+    'border-left-width',
+    'border-right-width',
+  ],
+  'border-block-width': [
+    'border-top-width',
+    'border-bottom-width',
+  ],
   'border-color': [
-    ...combineAffixes(['top', 'bottom', 'left', 'right', 'inline', 'inline-start', 'inline-end', 'block', 'block-start', 'block-end'], { leading: 'border', trailing: 'color' }),
-    combineAffixesString(['left', 'right'], { leading: 'border', trailing: 'color' }),
-    combineAffixesString(['top', 'bottom'], { leading: 'border', trailing: 'color' }),
+    'border-top-color',
+    'border-bottom-color',
+    'border-left-color',
+    'border-right-color',
+    'border-inline-color',
+    'border-inline-start-color',
+    'border-inline-end-color',
+    'border-block-color',
+    'border-block-start-color',
+    'border-block-end-color',
   ],
-  'border-inline-color': combineAffixes(['left', 'right'], { leading: 'border', trailing: 'color' }),
-  'border-block-color': combineAffixes(['top', 'bottom'], { leading: 'border', trailing: 'color' }),
+  'border-inline-color': [
+    'border-left-color',
+    'border-right-color',
+  ],
+  'border-block-color': [
+    'border-top-color',
+    'border-bottom-color',
+  ],
 
   'scroll-margin': [
-    ...combineAffixes(['top', 'bottom', 'left', 'right', 'inline', 'inline-start', 'inline-end', 'block', 'block-start', 'block-end'], { leading: 'scroll-margin' }),
-    combineAffixesString(['left', 'right'], { leading: 'scroll-margin' }),
-    combineAffixesString(['top', 'bottom'], { leading: 'scroll-margin' }),
+    'scroll-margin-top',
+    'scroll-margin-bottom',
+    'scroll-margin-left',
+    'scroll-margin-right',
+    'scroll-margin-inline',
+    'scroll-margin-inline-start',
+    'scroll-margin-inline-end',
+    'scroll-margin-block',
+    'scroll-margin-block-start',
+    'scroll-margin-block-end',
   ],
 
   'scroll-padding': [
-    ...combineAffixes(['top', 'bottom', 'left', 'right', 'inline', 'inline-start', 'inline-end', 'block', 'block-start', 'block-end'], { leading: 'scroll-padding' }),
-    combineAffixesString(['left', 'right'], { leading: 'scroll-padding' }),
-    combineAffixesString(['top', 'bottom'], { leading: 'scroll-padding' }),
+    'scroll-padding-top',
+    'scroll-padding-bottom',
+    'scroll-padding-left',
+    'scroll-padding-right',
+    'scroll-padding-inline',
+    'scroll-padding-inline-start',
+    'scroll-padding-inline-end',
+    'scroll-padding-block',
+    'scroll-padding-block-start',
+    'scroll-padding-block-end',
   ],
 }
 
-export function getConflictingKeys(content: string, variant: string) {
-  const includeProperties = content.split(';').filter((c) => c && !c.startsWith('--'))
+export function getTokenConflicting(tokenProperties: string[]) {
+  const expandProperties = tokenProperties.flatMap((p) => conflictingGroups[p]).filter(Boolean)
 
-  if (includeProperties.length > 1)
-    return includeProperties.map((p) => `${variant}${p};`)
+  if (expandProperties.length > 0) {
+    return tokenProperties.length > 1
+      ? [...tokenProperties, ...expandProperties]
+      : expandProperties
+  }
 
-  return includeProperties.flatMap((p) => {
-    const properties = conflictingGroups[p] ?? []
+  if (tokenProperties.length > 1)
+    return tokenProperties
 
-    return properties.map((property) => `${variant}${property};`)
-  })
-}
-
-interface CombineAffixesOptions {
-  leading?: string
-  trailing?: string
-}
-
-export function combineAffixes(
-  content: string[],
-  options: CombineAffixesOptions = {},
-) {
-  return Array.from(content)
-    .sort()
-    .map((s) => [options.leading, s, options.trailing].filter(Boolean).join('-'))
-}
-
-export function combineAffixesString(
-  content: string[],
-  options: CombineAffixesOptions = {},
-) {
-  return combineAffixes(content, options).join(';')
+  return []
 }

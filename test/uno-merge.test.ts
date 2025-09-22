@@ -2,17 +2,9 @@ import { twMerge } from 'tailwind-merge'
 import { presetWind4 } from 'unocss'
 import { describe, expect, it } from 'vitest'
 import { createGenerator } from '../src/generator'
-import { combineAffixes, combineAffixesString, createUnoMerge } from '../src/uno-merge'
+import { createUnoMerge } from '../src/uno-merge'
 
 describe('uno-merge', async () => {
-  it('combineAffixes', () => {
-    const arr1 = ['left', 'right', 'top', 'bottom']
-    const arr2 = ['top', 'bottom', 'left', 'right']
-
-    expect(combineAffixes(arr1)).toEqual(combineAffixes(arr2))
-    expect(combineAffixesString(arr1)).toEqual(combineAffixesString(arr2))
-  })
-
   const uno = await createGenerator({
     presets: [
       presetWind4(),
@@ -20,6 +12,7 @@ describe('uno-merge', async () => {
     shortcuts: {
       'ui-base-1': 'text-[1.5rem] text-blue-700 font-bold',
       'ui-base-2': 'text-[2.5rem] text-red-700 font-medium',
+      'ui-base-3': 'inset-0 p-0 m-0',
     },
   })
 
@@ -126,9 +119,14 @@ describe('uno-merge', async () => {
   })
 
   it('should merge shortcuts', () => {
-    const input = 'text-6 text-green-400 font-bold ui-base-2 text-black text-8 ui-base-1'
+    let input = 'text-6 text-green-400 font-bold ui-base-2 text-black text-8 ui-base-1'
+
     expect(twMerge(input)).toMatchInlineSnapshot(`"font-bold ui-base-2 text-8 ui-base-1"`) // baseline
     expect(unoMerge(input)).toMatchInlineSnapshot(`"ui-base-1"`)
+
+    input = 'inset-x-9 inset-8 py-7 p-6 m-5 ui-base-3'
+    expect(twMerge(input)).toMatchInlineSnapshot(`"inset-8 p-6 m-5 ui-base-3"`) // baseline
+    expect(unoMerge(input)).toMatchInlineSnapshot(`"ui-base-3"`)
   })
 
   it('should merge equivalent utilities and keep the latest one', () => {
