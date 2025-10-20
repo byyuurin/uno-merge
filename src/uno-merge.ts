@@ -59,7 +59,10 @@ export async function createUnoMerge<T extends UserConfig | ResolvedConfig = obj
       variantGroup.get(variant)
         ?.map((token) => ({ target: token, targetInfo: cache.get(token)! }))
         .forEach(({ target, targetInfo }) => {
-          if (tokenConflicting.some((v) => targetInfo.properties.includes(v))) {
+          if (targetInfo.properties.length === 0)
+            return
+
+          if (targetInfo.properties.every((p) => tokenConflicting.includes(p))) {
             variantTokens.delete(target)
             temp.delete(targetInfo.tempKey)
           }
