@@ -1,4 +1,5 @@
 import type { ResolvedConfig, UserConfig } from '@unocss/core'
+import { toEscapedSelector } from '@unocss/core'
 import { createGenerator } from './generator'
 
 const propertyNamesRE = /(?:([^:]+)):[^;]+;/g
@@ -15,7 +16,7 @@ export async function createUnoMerge<T extends UserConfig | ResolvedConfig = obj
 
     const { current = '', utils } = generator.parseToken(token) ?? {}
 
-    const tokenUtils = utils?.flat().find((result) => current && [current, `${current}\\!`].some((s) => result[1]?.endsWith(s)))
+    const tokenUtils = utils?.flat().find((result) => current && result[1]?.includes(toEscapedSelector(token)))
 
     const css = tokenUtils?.[2] ?? token
 

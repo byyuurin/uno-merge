@@ -1,3 +1,4 @@
+import { toEscapedSelector } from '@unocss/core'
 import { presetWind4 } from '@unocss/preset-wind4'
 import { twMerge } from 'tailwind-merge'
 import { describe, expect, it } from 'vitest'
@@ -21,7 +22,7 @@ describe('uno-merge', async () => {
   it('uno-generator', () => {
     const token = ''
     const { current = '', utils } = uno.parseToken(token) ?? {}
-    const tokenUtils = utils?.flat().find((result) => current && [current, `${current}\\!`].some((s) => result[1]?.endsWith(s)))
+    const tokenUtils = utils?.flat().find((result) => current && result[1]?.includes(toEscapedSelector(current)))
 
     const css = tokenUtils?.[2] ?? token
 
