@@ -30,16 +30,17 @@
     "@unocss/core": ">=66.1.0"
   },
   "devDependencies": {
-    "@byyuurin/eslint-config": "^1.9.0",
-    "@byyuurin/ui-kit": "^0.7.0",
-    "@types/node": "^24.5.2",
-    "@unocss/core": "^66.5.1",
-    "bumpp": "^10.2.3",
-    "eslint": "^9.36.0",
-    "tailwind-merge": "^3.3.1",
-    "tsdown": "^0.15.4",
-    "typescript": "^5.9.2",
-    "unocss": "^66.5.1",
-    "vitest": "^3.2.4"
+    "@byyuurin/eslint-config": "^1.9.1",
+    "@byyuurin/ui-kit": "^0.7.2",
+    "@types/node": "^25.0.9",
+    "@unocss/core": "^66.6.0",
+    "@unocss/preset-wind3": "^66.6.0",
+    "@unocss/preset-wind4": "^66.6.0",
+    "bumpp": "^10.4.0",
+    "eslint": "^9.39.2",
+    "tailwind-merge": "^3.4.0",
+    "tsdown": "^0.19.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.17"
   }
 }

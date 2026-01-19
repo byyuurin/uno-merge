@@ -1,5 +1,6 @@
 import { createCV, ct, cx } from '@byyuurin/ui-kit'
-import { presetWind3, presetWind4 } from 'unocss'
+import { presetWind3 } from '@unocss/preset-wind3'
+import { presetWind4 } from '@unocss/preset-wind4'
 import { describe, expect, it } from 'vitest'
 import { createUnoMerge } from '../src/uno-merge'
 

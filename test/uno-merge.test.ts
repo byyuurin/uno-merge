@@ -1,5 +1,5 @@
+import { presetWind4 } from '@unocss/preset-wind4'
 import { twMerge } from 'tailwind-merge'
-import { presetWind4 } from 'unocss'
 import { describe, expect, it } from 'vitest'
 import { createGenerator } from '../src/generator'
 import { createUnoMerge } from '../src/uno-merge'
@@ -18,14 +18,18 @@ describe('uno-merge', async () => {
 
   const { merge: unoMerge } = await createUnoMerge(uno.config)
 
-  it('uno-generator', async () => {
-    const tokenResult = await uno.parseToken('')
+  it('uno-generator', () => {
+    const token = ''
+    const { current = '', utils } = uno.parseToken(token) ?? {}
+    const tokenUtils = utils?.flat().find((result) => current && [current, `${current}\\!`].some((s) => result[1]?.endsWith(s)))
 
-    expect(tokenResult?.utils?.filter((result) => !result[2].startsWith('@'))?.[0][2]).toMatchInlineSnapshot(`undefined`)
+    const css = tokenUtils?.[2] ?? token
 
-    expect(tokenResult?.utils?.[0][2]).toMatchInlineSnapshot(`undefined`)
+    expect(css).toMatchInlineSnapshot(`""`)
 
-    const variantResult = await uno.matchVariants('')
+    expect(tokenUtils).toMatchInlineSnapshot(`undefined`)
+
+    const variantResult = uno.matchVariants('')
 
     expect(variantResult?.[0][2]).toMatchInlineSnapshot(`[]`)
 

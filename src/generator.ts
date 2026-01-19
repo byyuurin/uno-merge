@@ -2,7 +2,7 @@
  * This file is adapted from the UnoCSS source code.
  *
  * Original source:
- * https://github.com/unocss/unocss/blob/48ea5e30f7c07ec20570688688b0993f527a057a/packages-engine/core/src/generator.ts
+ * https://github.com/unocss/unocss/blob/b55b4628ce231847008db1bdd1e597ebefb1c17e/packages-engine/core/src/generator.ts
  *
  * Modifications:
  * 1. Retained only the parts necessary for `matchVariants` and `parseToken`
@@ -21,7 +21,7 @@ import { version } from '../package.json'
 
 interface InternalCacheValue<Theme extends object = object> {
   current: string
-  utils: StringifiedUtil<Theme>[]
+  utils: StringifiedUtil<Theme>[][]
 }
 
 class UnoGeneratorInternal<Theme extends object = object> {
@@ -119,12 +119,12 @@ class UnoGeneratorInternal<Theme extends object = object> {
       const utils = expanded
         ? this.stringifyShortcuts(context.variantMatch, context, expanded[0], expanded[1])
         // no shortcuts
-        : this.parseUtil(context.variantMatch, context)?.map((i) => this.stringifyUtil(i, context)).filter(notNull)
+        : this.parseUtil(context.variantMatch, context)?.flatMap((i) => this.stringifyUtil(i, context)).filter(notNull)
 
       return utils
     }
 
-    const utils = variantResults.flatMap((i) => handleVariantResult(i)).filter((x) => !!x)
+    const utils = variantResults.map((i) => handleVariantResult(i)).filter((x) => !!x)
 
     if (utils?.length) {
       const cacheValue: InternalCacheValue<Theme> = {
@@ -232,7 +232,7 @@ class UnoGeneratorInternal<Theme extends object = object> {
     parsed: ParsedUtil,
     variantHandlers = parsed[4],
     raw = parsed[1],
-  ): UtilObject {
+  ): UtilObject[] {
     const handler = variantHandlers.slice()
       .sort((a, b) => (a.order || 0) - (b.order || 0))
       .reduceRight(
@@ -285,7 +285,24 @@ class UnoGeneratorInternal<Theme extends object = object> {
     for (const p of this.config.postprocess)
       p(obj)
 
-    return obj
+    return this.config.postprocess.reduce<UtilObject[]>(
+      (utilities, p) => {
+        const result: UtilObject[] = []
+
+        for (const util of utilities) {
+          const processed = p(util)
+
+          if (Array.isArray(processed))
+            result.push(...processed.filter(notNull))
+
+          else
+            result.push(processed || util)
+        }
+
+        return result
+      },
+      [obj],
+    )
   }
 
   constructCustomCSS(
@@ -298,13 +315,16 @@ class UnoGeneratorInternal<Theme extends object = object> {
     if (isString(normalizedBody))
       return normalizedBody
 
-    const { selector, entries, parent } = this.applyVariants([0, overrideSelector || context.rawSelector, normalizedBody, undefined, context.variantHandlers])
-    const cssBody = `${selector}{${entriesToCss(entries)}}`
+    return this.applyVariants([0, overrideSelector || context.rawSelector, normalizedBody, undefined, context.variantHandlers])
+      .map(({ selector, entries, parent }) => {
+        const cssBody = `${selector}{${entriesToCss(entries)}}`
 
-    if (parent)
-      return `${parent}{${cssBody}}`
+        if (parent)
+          return `${parent}{${cssBody}}`
 
-    return cssBody
+        return cssBody
+      })
+      .join('')
   }
 
   parseUtil(
@@ -502,33 +522,40 @@ class UnoGeneratorInternal<Theme extends object = object> {
   stringifyUtil(
     parsed?: ParsedUtil | RawUtil,
     context?: RuleContext<Theme>,
-  ): StringifiedUtil<Theme> | undefined {
+  ): StringifiedUtil<Theme>[] | undefined {
     if (!parsed)
       return
 
     if (isRawUtil(parsed))
-      return [parsed[0], undefined, parsed[1], undefined, parsed[2], this.config.details ? context : undefined, undefined]
+      return [[parsed[0], undefined, parsed[1], undefined, parsed[2], this.config.details ? context : undefined, undefined]]
 
-    const {
-      selector,
-      entries,
-      parent,
-      layer: variantLayer,
-      sort: variantSort,
-      noMerge,
-    } = this.applyVariants(parsed)
-    const body = entriesToCss(entries)
+    const utilities = this.applyVariants(parsed)
+    const result: StringifiedUtil<Theme>[] = []
 
-    if (!body)
-      return
+    for (const util of utilities) {
+      const {
+        selector,
+        entries,
+        parent,
+        layer: variantLayer,
+        sort: variantSort,
+        noMerge,
+      } = util
+      const body = entriesToCss(entries)
 
-    const { layer: metaLayer, sort: metaSort, ...meta } = parsed[3] ?? {}
-    const ruleMeta = {
-      ...meta,
-      layer: variantLayer ?? metaLayer,
-      sort: variantSort ?? metaSort,
+      if (!body)
+        continue
+
+      const { layer: metaLayer, sort: metaSort, ...meta } = parsed[3] ?? {}
+      const ruleMeta = {
+        ...meta,
+        layer: variantLayer ?? metaLayer,
+        sort: variantSort ?? metaSort,
+      }
+      result.push([parsed[0], selector, body, parent, ruleMeta, this.config.details ? context : undefined, noMerge])
     }
-    return [parsed[0], selector, body, parent, ruleMeta, this.config.details ? context : undefined, noMerge]
+
+    return result
   }
 
   expandShortcut(
@@ -660,14 +687,15 @@ class UnoGeneratorInternal<Theme extends object = object> {
 
       const isNoMerge = Object.fromEntries(item[2])[symbols.shortcutsNoMerge]
       const variants = [...item[4], ...(isNoMerge ? [] : parentVariants)]
-      const { selector, entries, parent, sort, noMerge, layer } = this.applyVariants(item, variants, raw)
 
-      // find existing layer and merge
-      const selectorMap = layerMap.getFallback(layer ?? meta.layer, new TwoKeyMap())
-      // find existing selector/mediaQuery pair and merge
-      const mapItem = selectorMap.getFallback(selector, parent, [[], item[0]])
-      // add entries
-      mapItem[0].push([entries, !!(noMerge ?? item[3]?.noMerge), sort ?? 0])
+      for (const { selector, entries, parent, sort, noMerge, layer } of this.applyVariants(item, variants, raw)) {
+        // find existing layer and merge
+        const selectorMap = layerMap.getFallback(layer ?? meta.layer, new TwoKeyMap())
+        // find existing selector/mediaQuery pair and merge
+        const mapItem = selectorMap.getFallback(selector, parent, [[], item[0]])
+        // add entries
+        mapItem[0].push([entries, !!(noMerge ?? item[3]?.noMerge), sort ?? 0])
+      }
     }
 
     return rawStringifiedUtil.concat(layerMap

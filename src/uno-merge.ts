@@ -15,8 +15,9 @@ export async function createUnoMerge<T extends UserConfig | ResolvedConfig = obj
 
     const { current = '', utils } = generator.parseToken(token) ?? {}
 
-    const tokenUtils = utils?.filter((result) => !result[2].startsWith('@'))
-    const css = tokenUtils?.[0]![2] ?? token
+    const tokenUtils = utils?.flat().find((result) => current && [current, `${current}\\!`].some((s) => result[1]?.endsWith(s)))
+
+    const css = tokenUtils?.[2] ?? token
 
     let variant = token.replace(/^!|!$|\B!\b/, '').replace(current, '')
 
