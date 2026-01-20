@@ -22,7 +22,8 @@ describe('uno-merge', async () => {
   it('uno-generator', () => {
     const token = ''
     const { current = '', utils } = uno.parseToken(token) ?? {}
-    const tokenUtils = utils?.flat().find((result) => current && result[1]?.includes(toEscapedSelector(current)))
+    const escapedSelector = toEscapedSelector(token)
+    const tokenUtils = utils?.flat().find(([_index, selector, _body, parent]) => current && (selector?.includes(escapedSelector) || parent?.includes(escapedSelector)))
 
     const css = tokenUtils?.[2] ?? token
 
@@ -111,6 +112,22 @@ describe('uno-merge', async () => {
     expect(unoMerge(input)).toMatchInlineSnapshot(`"animate-flip animate-ping!"`)
   })
 
+  it('with variants', () => {
+    const input = 'hover:bg-red-100 active:text-red-700 hover:bg-blue-100 active:text-red-50'
+    expect(twMerge(input)).toMatchInlineSnapshot(`"hover:bg-blue-100 active:text-red-50"`) // baseline
+    expect(unoMerge(input)).toMatchInlineSnapshot(`"hover:bg-blue-100 active:text-red-50"`)
+  })
+
+  it('based on parent state', () => {
+    let input = 'group-hover:bg-red-100 group-active:bg-red-700 group-hover:bg-green-100 group-active:bg-green-700 group-active:bg-green-950'
+    expect(twMerge(input)).toMatchInlineSnapshot(`"group-hover:bg-green-100 group-active:bg-green-950"`) // baseline
+    expect(unoMerge(input)).toMatchInlineSnapshot(`"group-hover:bg-green-100 group-active:bg-green-950"`)
+
+    input = 'group-data-[active]:text-red-100 group-data-[active]:bg-red-100 group-data-[active]:text-red-700'
+    expect(twMerge(input)).toMatchInlineSnapshot(`"group-data-[active]:bg-red-100 group-data-[active]:text-red-700"`) // baseline
+    expect(unoMerge(input)).toMatchInlineSnapshot(`"group-data-[active]:text-red-700 group-data-[active]:bg-red-100"`)
+  })
+
   it('should merge multiple style properties', () => {
     const input = 'overflow-auto inline line-clamp-1'
     expect(twMerge(input)).toMatchInlineSnapshot(`"line-clamp-1"`) // baseline
@@ -125,7 +142,6 @@ describe('uno-merge', async () => {
 
   it('should merge shortcuts', () => {
     let input = 'text-6 text-green-400 font-bold ui-base-2 text-black text-8 ui-base-1'
-
     expect(twMerge(input)).toMatchInlineSnapshot(`"font-bold ui-base-2 text-8 ui-base-1"`) // baseline
     expect(unoMerge(input)).toMatchInlineSnapshot(`"ui-base-1"`)
 

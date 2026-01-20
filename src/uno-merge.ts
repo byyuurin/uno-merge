@@ -15,8 +15,9 @@ export async function createUnoMerge<T extends UserConfig | ResolvedConfig = obj
       return cachedValue
 
     const { current = '', utils } = generator.parseToken(token) ?? {}
+    const escapedSelector = toEscapedSelector(token)
 
-    const tokenUtils = utils?.flat().find((result) => current && result[1]?.includes(toEscapedSelector(token)))
+    const tokenUtils = utils?.flat().find(([_index, selector, _body, parent]) => current && (selector?.includes(escapedSelector) || parent?.includes(escapedSelector)))
 
     const css = tokenUtils?.[2] ?? token
 
