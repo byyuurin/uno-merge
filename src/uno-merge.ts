@@ -237,17 +237,20 @@ const conflictingGroups: Record<string, string[]> = {
   ],
 }
 
+const conflictingExcludes = new Set(['content'])
+
 export function getTokenConflicting(tokenProperties: string[]) {
+  const properties = tokenProperties.filter((p) => !conflictingExcludes.has(p))
   const expandProperties = tokenProperties.flatMap((p) => conflictingGroups[p]).filter(Boolean)
 
   if (expandProperties.length > 0) {
-    return tokenProperties.length > 1
-      ? [...tokenProperties, ...expandProperties]
+    return properties.length > 1
+      ? Array.from(new Set([...properties, ...expandProperties]))
       : expandProperties
   }
 
-  if (tokenProperties.length > 1)
-    return tokenProperties
+  if (properties.length > 1)
+    return properties
 
   return []
 }

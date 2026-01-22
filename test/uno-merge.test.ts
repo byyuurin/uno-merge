@@ -15,6 +15,29 @@ describe('uno-merge', async () => {
       'ui-base-2': 'text-[2.5rem] text-red-700 font-medium',
       'ui-base-3': 'inset-0 p-0 m-0',
     },
+    postprocess: [
+      (util) => {
+        if (util.layer === 'properties')
+          return
+
+        util.entries.forEach((i) => {
+          const CONTENT_EMPTY = '""'
+
+          if (i[0] === 'content' && i[1] === CONTENT_EMPTY) {
+            i[1] = 'var(--un-content)'
+            util.entries.unshift(['--un-content', CONTENT_EMPTY])
+          }
+        })
+
+        if (!/(?:before|after)(?:\\:|-).+/.test(util.selector))
+          return
+
+        if (util.entries.some((i) => i[0] === 'content' || i[0] === '--un-content'))
+          return
+
+        util.entries.unshift(['content', 'var(--un-content)'])
+      },
+    ],
   })
 
   const { merge: unoMerge } = await createUnoMerge(uno.config)
@@ -26,6 +49,14 @@ describe('uno-merge', async () => {
     const tokenUtils = utils?.flat().find(([_index, selector, _body, parent]) => current && (selector?.includes(escapedSelector) || parent?.includes(escapedSelector)))
 
     const css = tokenUtils?.[2] ?? token
+
+    expect({ escapedSelector, current, utils }).toMatchInlineSnapshot(`
+      {
+        "current": "",
+        "escapedSelector": ".",
+        "utils": undefined,
+      }
+    `)
 
     expect(css).toMatchInlineSnapshot(`""`)
 
@@ -104,6 +135,17 @@ describe('uno-merge', async () => {
     const input = 'animate-bounce animate-none'
     expect(twMerge(input)).toMatchInlineSnapshot(`"animate-none"`) // baseline
     expect(unoMerge(input)).toMatchInlineSnapshot(`"animate-none"`)
+  })
+
+  it('content', () => {
+    let input = `content-[""] content-empty`
+
+    expect(twMerge(input)).toMatchInlineSnapshot(`"content-[""] content-empty"`) // baseline
+    expect(unoMerge(input)).toMatchInlineSnapshot(`"content-empty"`)
+
+    input = `after:content-empty after:content-["!"] after:absolute`
+    expect(twMerge(input)).toMatchInlineSnapshot(`"after:content-empty after:content-["!"] after:absolute"`) // baseline
+    expect(unoMerge(input)).toMatchInlineSnapshot(`"after:content-["!"] after:absolute"`)
   })
 
   it('with important flag', () => {
